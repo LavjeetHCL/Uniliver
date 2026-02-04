@@ -1,0 +1,120 @@
+name: Deploy_Dev
+on:
+  pull_request:
+    branches:
+      - dev
+      
+  push:
+    branches:
+      - dev
+      - feature/*
+
+
+run-name: ${{ github.actor }}
+
+
+permissions:
+  id-token: write
+  contents: read
+  
+jobs:
+# -------------------- Security Scan --------------------
+  tfsec-scan:
+    name: tfsec Scan
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: environments/dev
+          soft_fail: false
+
+
+ #----------------------------Terraform Init & Plan Job----------------------------------
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: self-hosted 
+    
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: Azure/login@v2.3.0
+        with:
+          client-id: ${{secrets.AZURE_CLIENT_ID}}
+          tenant-id: ${{secrets.AZURE_TENANT_ID}}
+          subscription-id: ${{secrets.AZURE_SUBSCRIPTION_ID}}
+          
+
+      - name: Terraform Init
+        id: Init
+        run: terraform init
+        working-directory: environments/dev
+
+      - name: Terraform fmt
+        id: Fmt
+        run: terraform fmt
+        working-directory: environments/dev
+
+      - name: Terraform Validate
+        id: Validate
+        run: terraform validate
+        working-directory: environments/dev
+
+      - name: Terraform Plan
+        id: Plan
+        run: terraform plan -no-color -input=false -out=tfplan
+        #continue-on-error: true
+        working-directory: environments/dev
+         
+
+  #----------------------------Terraform Apply Job---------------------------------- 
+
+
+  terraform-apply:
+    name: Terraform Apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    needs: terraform-plan
+    runs-on: self-hosted
+    
+    environment: dev   # approval gate
+
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: Azure/login@v2.3.0
+        with:
+          client-id: ${{secrets.AZURE_CLIENT_ID}}
+          tenant-id: ${{secrets.AZURE_TENANT_ID}}
+          subscription-id: ${{secrets.AZURE_SUBSCRIPTION_ID}}
+      
+      - name: Terraform Init
+        id: Init
+        run: terraform init -input=false
+        working-directory: environments/dev
+
+      - name: Terraform Apply
+        id: Apply
+        run: terraform apply --auto-approve
+        working-directory: environments/dev
+        
+        
