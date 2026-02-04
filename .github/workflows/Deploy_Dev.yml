@@ -65,8 +65,15 @@ jobs:
 
       - name: Terraform Init
         id: Init
-        run: terraform init
+        run: |
+          run: |
+            terraform init \
+              -backend-config="resource_group_name=rg-backend" \
+              -backend-config="storage_account_name=backendstguk01" \
+              -backend-config="container_name=tfstate" \
+              -backend-config="key=dev.tfstate"
         working-directory: environments/dev
+
 
       - name: Terraform fmt
         id: Fmt
@@ -120,7 +127,13 @@ jobs:
 
       - name: Terraform Init
         id: Init
-        run: terraform init -input=false
+        run: |
+          run: |
+            terraform init \
+              -backend-config="resource_group_name=rg-backend" \
+              -backend-config="storage_account_name=backendstguk01" \
+              -backend-config="container_name=tfstate" \
+              -backend-config="key=dev.tfstate"
         working-directory: environments/dev
 
       - name: Terraform Apply
