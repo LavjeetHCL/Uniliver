@@ -58,10 +58,10 @@ jobs:
       - name: Terraform Init
         run: |          
           terraform init \
-            -backend-config="resource_group_name=rg-backend" \
-            -backend-config="storage_account_name=backendstguk01" \
+            -backend-config="resource_group_name=backend-qa" \
+            -backend-config="storage_account_name=backendstgukqa" \
             -backend-config="container_name=tfstate" \
-            -backend-config="key=QA.tfstate"
+            -backend-config="key=qa.tfstate"
         working-directory: environments/dev
 
       - name: Terraform Format Check
@@ -109,10 +109,10 @@ jobs:
       - name: Terraform Init
         run: |          
           terraform init \
-            -backend-config="resource_group_name=rg-backend" \
-            -backend-config="storage_account_name=backendstguk01" \
+            -backend-config="resource_group_name=backend-qa" \
+            -backend-config="storage_account_name=backendstgukqa" \
             -backend-config="container_name=tfstate" \
-            -backend-config="key=QA.tfstate"
+            -backend-config="key=qa.tfstate"
         working-directory: environments/dev
 
       - name: Terraform Apply
