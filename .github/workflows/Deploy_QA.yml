@@ -16,7 +16,7 @@ jobs:
 # -------------------- Security Scan --------------------
   tfsec-scan:
     name: tfsec Security Scan (QA)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -32,7 +32,7 @@ jobs:
   terraform-plan:
     name: Terraform Plan (QA)
     needs: tfsec-scan
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     env:
       ARM_USE_OIDC: true
@@ -69,7 +69,7 @@ jobs:
   terraform-apply:
     name: Terraform Apply (QA)
     needs: terraform-plan
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/qa'
 
     environment:

@@ -21,7 +21,7 @@ jobs:
 # -------------------- Security Scan --------------------
   tfsec-scan:
     name: tfsec Scan
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -37,8 +37,9 @@ jobs:
  #----------------------------Terraform Init & Plan Job----------------------------------
   terraform-plan:
     name: Terraform Plan
-    runs-on: self-hosted 
-    
+    runs-on: ubuntu-latest 
+    needs: tfsec-scan
+
     env:
       ARM_USE_OIDC: true
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -86,7 +87,7 @@ jobs:
     name: Terraform Apply
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     needs: terraform-plan
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     
     environment: dev   # approval gate
 
@@ -119,6 +120,6 @@ jobs:
         
         
 
-        
+
 
 
