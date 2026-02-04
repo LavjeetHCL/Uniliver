@@ -2,7 +2,7 @@ rgs = {
   rg-infra-app1-uk = {
     location = "southindia"
   }
-   rg-infra-app2-uk = {
+  rg-infra-app2-uk = {
     location = "southindia"
   }
 }
