@@ -65,13 +65,12 @@ jobs:
 
       - name: Terraform Init
         id: Init
-        run: |
-          run: |
-            terraform init \
-              -backend-config="resource_group_name=rg-backend" \
-              -backend-config="storage_account_name=backendstguk01" \
-              -backend-config="container_name=tfstate" \
-              -backend-config="key=dev.tfstate"
+        run: |          
+          terraform init \
+            -backend-config="resource_group_name=rg-backend" \
+            -backend-config="storage_account_name=backendstguk01" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=dev.tfstate"
         working-directory: environments/dev
 
 
@@ -127,13 +126,12 @@ jobs:
 
       - name: Terraform Init
         id: Init
-        run: |
-          run: |
-            terraform init \
-              -backend-config="resource_group_name=rg-backend" \
-              -backend-config="storage_account_name=backendstguk01" \
-              -backend-config="container_name=tfstate" \
-              -backend-config="key=dev.tfstate"
+        run: |          
+          terraform init \
+            -backend-config="resource_group_name=rg-backend" \
+            -backend-config="storage_account_name=backendstguk01" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=dev.tfstate"
         working-directory: environments/dev
 
       - name: Terraform Apply

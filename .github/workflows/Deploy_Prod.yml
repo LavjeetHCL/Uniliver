@@ -25,7 +25,7 @@ jobs:
       - name: Run tfsec
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
-          working_directory: environments/prod
+          working_directory: environments/dev
           soft_fail: false
 
 # -------------------- Terraform Plan --------------------
@@ -56,20 +56,25 @@ jobs:
           terraform_version: 1.6.6
 
       - name: Terraform Init
-        run: terraform init
-        working-directory: environments/prod
+        run: |          
+          terraform init \
+            -backend-config="resource_group_name=rg-backend" \
+            -backend-config="storage_account_name=backendstguk01" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=Prod.tfstate"
+        working-directory: environments/dev
 
       - name: Terraform Format Check
         run: terraform fmt 
-        working-directory: environments/prod
+        working-directory: environments/dev
 
       - name: Terraform Validate
         run: terraform validate
-        working-directory: environments/prod
+        working-directory: environments/dev
 
       - name: Terraform Plan
         run: terraform plan -no-color
-        working-directory: environments/prod
+        working-directory: environments/dev
 
 # -------------------- Terraform Apply --------------------
   terraform-apply:
@@ -102,9 +107,14 @@ jobs:
           terraform_version: 1.6.6
 
       - name: Terraform Init
-        run: terraform init
-        working-directory: environments/prod
+        run: |          
+          terraform init \
+            -backend-config="resource_group_name=rg-backend" \
+            -backend-config="storage_account_name=backendstguk01" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=Prod.tfstate"
+        working-directory: environments/dev
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
-        working-directory: environments/prod
+        working-directory: environments/dev
