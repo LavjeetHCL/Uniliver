@@ -39,7 +39,7 @@ jobs:
     name: Terraform Plan
     runs-on: ubuntu-latest 
     needs: tfsec-scan
-    environment: Dev
+    
     
     env:
       ARM_USE_OIDC: true
