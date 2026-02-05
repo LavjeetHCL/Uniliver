@@ -35,7 +35,7 @@ jobs:
       - name: Run tfsec
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
-          working_directory: environments/dev
+          working_directory: ./environments/dev
           soft_fail: false
 
 
@@ -104,17 +104,12 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./environment/dev
+        working-directory: ./environments/dev
     
     
     environment: Dev   # approval gate
 
-    env:
-      ARM_USE_OIDC: true
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
+  
     steps:
       - name: Checkout
         uses: actions/checkout@v4
