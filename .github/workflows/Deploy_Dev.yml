@@ -100,7 +100,7 @@ jobs:
     needs: terraform-plan
     runs-on: ubuntu-latest
     
-    environment: Dev   # approval gate
+    #environment: Dev   # approval gate
 
     env:
       ARM_USE_OIDC: true
@@ -141,7 +141,7 @@ jobs:
         
         
 
-        
+
 
 
 
