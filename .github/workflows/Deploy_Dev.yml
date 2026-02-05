@@ -44,7 +44,7 @@ jobs:
     name: Terraform Plan
     runs-on: ubuntu-latest 
     needs: tfsec-scan
-    environment: Dev1
+    environment: Dev
     defaults:
       run:
         working-directory: ./environments/dev
