@@ -12,6 +12,12 @@ permissions:
   id-token: write
   contents: read
 
+env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
 jobs:
 # -------------------- Security Scan --------------------
   tfsec-scan:
@@ -25,7 +31,7 @@ jobs:
       - name: Run tfsec
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
-          working_directory: environments/dev
+          working_directory: ./environments/dev
           soft_fail: false
 
 # -------------------- Terraform Plan --------------------
@@ -33,13 +39,11 @@ jobs:
     name: Terraform Plan (PROD)
     needs: tfsec-scan
     runs-on: ubuntu-latest
-    environment: Prod
+    environment: Prod1
+    defaults:
+      run:
+        working-directory: ./environments/dev
     
-    env:
-      ARM_USE_OIDC: true
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     steps:
       - uses: actions/checkout@v4
@@ -62,19 +66,19 @@ jobs:
             -backend-config="storage_account_name=backendstgukprod" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=prod.tfstate"
-        working-directory: environments/dev
+        
 
       - name: Terraform Format Check
         run: terraform fmt 
-        working-directory: environments/dev
+        
 
       - name: Terraform Validate
         run: terraform validate
-        working-directory: environments/dev
+       
 
       - name: Terraform Plan
         run: terraform plan -no-color
-        working-directory: environments/dev
+      
 
 # -------------------- Terraform Apply --------------------
   terraform-apply:
@@ -82,15 +86,11 @@ jobs:
     needs: terraform-plan
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
+    defaults:
+      run:
+        working-directory: ./environments/dev
     environment:
       name: Prod   # 2 approvals enforced here
-
-    env:
-      ARM_USE_OIDC: true
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     steps:
       - uses: actions/checkout@v4
@@ -113,8 +113,8 @@ jobs:
             -backend-config="storage_account_name=backendstgukprod" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=prod.tfstate"
-        working-directory: environments/dev
+        
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
-        working-directory: environments/dev
+        
