@@ -44,8 +44,10 @@ jobs:
     name: Terraform Plan
     runs-on: ubuntu-latest 
     needs: tfsec-scan
-    #environment: Dev
-    
+    environment: Dev
+    defaults:
+      run:
+        working-directory: ./environment/dev
     
 
     steps:
@@ -72,24 +74,24 @@ jobs:
             -backend-config="storage_account_name=backendstgukdev" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=dev.tfstate"
-        working-directory: environments/dev
+        
 
 
       - name: Terraform fmt
         id: Fmt
         run: terraform fmt
-        working-directory: environments/dev
+        
 
       - name: Terraform Validate
         id: Validate
         run: terraform validate
-        working-directory: environments/dev
+        
 
       - name: Terraform Plan
         id: Plan
         run: terraform plan -no-color -input=false -out=tfplan
         #continue-on-error: true
-        working-directory: environments/dev
+        
          
 
   #----------------------------Terraform Apply Job---------------------------------- 
@@ -100,6 +102,10 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     needs: terraform-plan
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./environment/dev
+    
     
     environment: Dev   # approval gate
 
@@ -133,12 +139,12 @@ jobs:
             -backend-config="storage_account_name=backendstgukdev" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=dev.tfstate"
-        working-directory: environments/dev
+        
 
       - name: Terraform Apply
         id: Apply
         run: terraform apply --auto-approve
-        working-directory: environments/dev
+        
         
         
 
