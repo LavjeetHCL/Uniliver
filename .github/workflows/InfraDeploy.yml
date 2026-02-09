@@ -213,7 +213,8 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           echo "🔧 Initializing Terraform for ${{ env.ENVIRONMENT }} environment..."
-          terraform init -input=false
+          terraform init -input=false 
+            
 
       - name: Terraform Init (GCP)
         if: needs.detect-provider.outputs.provider == 'gcp'
