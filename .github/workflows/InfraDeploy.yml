@@ -84,7 +84,7 @@ jobs:
           echo "🌍 Environment: ${ENV}"
 
           # Check provider files
-          PROVIDER_FILE="tf/environments/${ENV}/provider.tf"
+          PROVIDER_FILE="environments/${ENV}/provider.tf"
 
           if [ ! -f "$PROVIDER_FILE" ]; then
             echo "❌ Provider file not found: $PROVIDER_FILE"
@@ -121,13 +121,13 @@ jobs:
           tflint_version: latest
 
       - name: Initialize TFLint
-        working-directory: tf/environments/${{ needs.detect-provider.outputs.environment }}
+        working-directory: environments/${{ needs.detect-provider.outputs.environment }}
         run: |
           echo "Initializing TFLint..."
           tflint --init
 
       - name: Run TFLint
-        working-directory: tf/environments/${{ needs.detect-provider.outputs.environment }}
+        working-directory: environments/${{ needs.detect-provider.outputs.environment }}
         run: |
           echo "Running TFLint..."
           tflint --format=json --force > tflint-results.json || true
