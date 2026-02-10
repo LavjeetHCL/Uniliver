@@ -24,24 +24,31 @@ variable "vnets_subnets" {
 
 variable "vms" {
   type = map(object({
-    resource_group_name     = string
-    location                = string
-    vnet_name               = string
-    subnet_name             = string
-    size                    = string
-    admin_username          = string
-    admin_password          = string
-    userdata_script         = string
-    inbound_open_ports      = list(number)
-    source_image_reference  = object({
+    resource_group_name = string
+    location            = string
+    vnet_name           = string
+    subnet_name         = string
+    size                = string
+    userdata_script     = string
+    inbound_open_ports  = list(number)
+    source_image_reference = object({
       publisher = string
       offer     = string
       sku       = string
       version   = string
     })
-    enable_public_ip        = bool
+    enable_public_ip = bool
+    kv_name = string
   }))
-  description = "Map of virtual machines to be created."
 }
 
 
+variable "key_vaults" {
+
+  type = map(object({
+    kv_name  = string
+    location = string
+    rg_name  = string
+  }))
+  description = "A map of Key Vault configurations."
+}
