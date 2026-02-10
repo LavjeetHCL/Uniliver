@@ -7,3 +7,4 @@ variable "key_vaults" {
   }))
   description = "A map of Key Vault configurations."
 }
+
