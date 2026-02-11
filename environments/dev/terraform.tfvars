@@ -34,13 +34,13 @@ vnets_subnets = {
 }
 
 
-key_vaults = {
-  kv1 = {
-    kv_name  = "app1-uk-key-vault"
-    location = "southindia"
-    rg_name  = "rg-infra-app1-uk"
-  }
-}
+# key_vaults = {
+#   kv1 = {
+#     kv_name  = "app1-uk-key-vault"
+#     location = "southindia"
+#     rg_name  = "rg-infra-app1-uk"
+#   }
+# }
 
 
 
@@ -51,8 +51,9 @@ vms = {
     vnet_name           = "vnet-infra-app1-uk"
     subnet_name         = "frontend-subnet"
     size                = "Standard_D2s_v3"
+    admin_username      = "azureuser"
     userdata_script     = "install_nginx.sh"
-    inbound_open_ports  = [22, 80]
+    inbound_open_ports  = [22, 80] ## REMOVE 22 if you don't want SSH access to frontend VM
     source_image_reference = {
       publisher = "Canonical"
       offer     = "0001-com-ubuntu-server-focal"
@@ -60,7 +61,7 @@ vms = {
       version   = "latest"
     }
     enable_public_ip = true
-    kv_name = "app1-uk-key-vault"
+    #kv_name = "app1-uk-key-vault"
   }
   backendvm = {
     resource_group_name = "rg-infra-app1-uk"
@@ -68,8 +69,9 @@ vms = {
     vnet_name           = "vnet-infra-app1-uk"
     subnet_name         = "backend-subnet"
     size                = "Standard_D2s_v3"
+    admin_username      = "azureuser"
     userdata_script     = "install_python.sh"
-    inbound_open_ports  = [22, 8000]
+    inbound_open_ports  = [8000] ## REMOVE 22 if you don't want SSH access to backend VM
     source_image_reference = {
       publisher = "Canonical"
       offer     = "0001-com-ubuntu-server-focal"
@@ -77,7 +79,7 @@ vms = {
       version   = "latest"
     }
     enable_public_ip = false
-    kv_name = "app1-uk-key-vault"
+    #kv_name = "app1-uk-key-vault"
   }
 }
 

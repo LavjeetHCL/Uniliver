@@ -38,17 +38,18 @@ variable "vms" {
       version   = string
     })
     enable_public_ip = bool
-    kv_name = string
+    #kv_name = string
   }))
 }
 
 
-variable "key_vaults" {
 
-  type = map(object({
-    kv_name  = string
-    location = string
-    rg_name  = string
-  }))
-  description = "A map of Key Vault configurations."
-}
+# variable "key_vaults" {
+
+#   type = map(object({
+#     kv_name  = string
+#     location = string
+#     rg_name  = string
+#   }))
+#   description = "A map of Key Vault configurations."
+# }

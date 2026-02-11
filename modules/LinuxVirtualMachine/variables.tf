@@ -14,7 +14,7 @@ variable "vms" {
       version   = string
     })
     enable_public_ip = bool
-    kv_name = string
+    #kv_name = string
   }))
 }
 
@@ -24,3 +24,11 @@ variable "vnet_subnet_ids" {
   type = map(map(string))
   description = "A map of virtual network names to their subnet IDs."
 }
+
+
+variable "public_key" {
+  description = "SSH public key content"
+  type        = string
+}
+
+
