@@ -4,6 +4,7 @@ variable "vms" {
     location            = string
     vnet_name           = string
     subnet_name         = string
+    admin_username      = string
     size                = string
     userdata_script     = string
     inbound_open_ports  = list(number)

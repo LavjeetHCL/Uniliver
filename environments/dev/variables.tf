@@ -29,6 +29,7 @@ variable "vms" {
     vnet_name           = string
     subnet_name         = string
     size                = string
+    admin_username      = string
     userdata_script     = string
     inbound_open_ports  = list(number)
     source_image_reference = object({
