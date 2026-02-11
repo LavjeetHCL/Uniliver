@@ -1,0 +1,306 @@
+name: Infra Deploy
+
+on:
+  push:
+    branches:
+      - dev
+      - qa
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - dev
+      - qa
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+        default: 'plan'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+  issues: write
+  security-events: write  # Required for CodeQL SARIF upload
+
+
+jobs:
+  # ============================== Detect Provider and Environment ==============================
+  detect-provider:
+    name: Detect Cloud Provider
+    runs-on: ubuntu-latest
+    outputs:
+      provider: ${{ steps.detect.outputs.provider }}
+      environment: ${{ steps.detect.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect Provider and Environment
+        id: detect
+        run: |
+          # Determine environment
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ inputs.environment }}" ]; then
+            ENV="${{ inputs.environment }}"
+            echo "Using manual environment selection: ${ENV}"
+          elif [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For PRs, use target branch to determine environment
+            if [ "${{ github.base_ref }}" == "main" ]; then
+              ENV="prod"
+            elif [ "${{ github.base_ref }}" == "dev" ]; then
+              ENV="dev"
+            else
+              ENV="qa"
+            fi
+            echo "PR targeting ${ENV} environment"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            ENV="prod"
+          elif [ "${{ github.ref }}" == "refs/heads/qa" ]; then
+            ENV="qa"
+          elif [ "${{ github.ref }}" == "refs/heads/dev" ]; then
+            ENV="dev"
+          else
+            # For feature branches, default to dev for validation
+            ENV="dev"
+            echo "Feature branch detected, using dev environment for validation"
+          fi
+
+          echo "environment=${ENV}" >> $GITHUB_OUTPUT
+          echo "🌍 Environment: ${ENV}"
+
+          # Check provider files
+          PROVIDER_FILE="environments/${ENV}/provider.tf"
+
+          if [ ! -f "$PROVIDER_FILE" ]; then
+            echo "❌ Provider file not found: $PROVIDER_FILE"
+            exit 1
+          fi
+
+          # Detect provider
+          if grep -q "provider \"azurerm\"" "$PROVIDER_FILE"; then
+            PROVIDER="azure"
+            echo "☁️  Detected Azure provider"
+          elif grep -q "provider \"google\"" "$PROVIDER_FILE"; then
+            PROVIDER="gcp"
+            echo "☁️  Detected GCP provider"
+          else
+            echo "❌ No supported provider found in $PROVIDER_FILE"
+            exit 1
+          fi
+
+          echo "provider=${PROVIDER}" >> $GITHUB_OUTPUT
+          echo "✅ Provider: ${PROVIDER}"
+
+  #============================= TFLint Linter Scan ==============================        
+  tflint-scan:
+    name: TFLint Linter Scan
+    needs: detect-provider
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: Initialize TFLint
+        working-directory: environments/${{ needs.detect-provider.outputs.environment }}
+        run: |
+          echo "Initializing TFLint..."
+          tflint --init
+
+      - name: Run TFLint
+        working-directory: environments/${{ needs.detect-provider.outputs.environment }}
+        run: |
+          echo "Running TFLint..."
+          tflint --format=json --force > tflint-results.json || true
+          tflint --format=compact || true
+
+  #============================= TruffleHog Secret Scan ==============================
+  detect-secrets-scan:
+    name: Detect Secrets Scan
+    needs: detect-provider
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 #fetch full git history 
+          
+      - name: Run TruffleHog Scan (PR)    # Only run on pull requests, Scan Secret in new changes by comparing base branch to head branch
+        if: github.event_name == 'pull_request'
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./                                          # Scan entire repository
+          base: ${{ github.event.pull_request.base.sha }}   # Compare against base branch (from where PR is created)
+          head: ${{ github.event.pull_request.head.sha }}   # Compare against head branch (to which PR is created) (Base commit → Head commit → beech ka diff → secrets scan)
+          extra_args: --only-verified                       # Only report verified secrets to reduce false positives and ignore fake stings / random strings ( )
+        
+      - name: Run TruffleHog Scan (Push - Last Commit) # Only run on push events, Scan Secret in last commit by comparing previous commit to current commit
+        if: github.event_name == 'push'
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.before }}
+          head: ${{ github.sha }}
+          extra_args: --only-verified
+
+      - name: Run TruffleHog Scan (Full Scan for Workflow Dispatch) # Only run on manual trigger, Scan Secret in entire repository as there is no commit reference for comparison in this case
+        if: github.event_name == 'workflow_dispatch'
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          extra_args: --only-verified
+
+  # ============================= Terraform Deploy ==============================        
+  terraform-deploy:
+    name: Terraform Deploy (${{ needs.detect-provider.outputs.provider }})
+    needs: [detect-provider, tflint-scan, detect-secrets-scan]
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ needs.detect-provider.outputs.environment }}
+      PROVIDER: ${{ needs.detect-provider.outputs.provider }}
+
+    defaults:
+      run:
+        working-directory: ./environments/${{ env.ENVIRONMENT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        if: needs.detect-provider.outputs.provider == 'azure'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configure GCP OIDC
+        if: needs.detect-provider.outputs.provider == 'gcp'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+          terraform_wrapper: false
+
+      # ----------------- Terraform Init -------------------------
+      - name: Terraform Init (Azure)
+        if: needs.detect-provider.outputs.provider == 'azure'
+        env:
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          echo "🔧 Initializing Terraform for ${{ env.ENVIRONMENT }} environment..."
+          terraform init -input=false 
+            
+
+      - name: Terraform Init (GCP)
+        if: needs.detect-provider.outputs.provider == 'gcp'
+        env:
+          GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          echo "🔧 Initializing Terraform for ${{ env.ENVIRONMENT }} environment..."
+          terraform init -input=false
+        
+      # ----------------- Terraform Validate -------------------------
+      - name: Terraform Validate (Azure)
+        if: needs.detect-provider.outputs.provider == 'azure'
+        env:
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          echo "✔️  Validating Terraform configuration..."
+          terraform validate
+
+      - name: Terraform Validate (GCP)
+        if: needs.detect-provider.outputs.provider == 'gcp'
+        env:
+          GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          echo "✔️  Validating Terraform configuration..."
+          terraform validate
+
+
+      # ----------------- Terraform Plan -------------------------
+      - name: Terraform Plan (Azure)
+        if: needs.detect-provider.outputs.provider == 'azure'
+        id: plan-azure
+        env:
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          echo "📋 Creating Terraform plan..."
+          terraform plan -input=false -out=tfplan -no-color | tee plan.txt
+          PLAN_EXIT_CODE=$?
+
+          if [ $PLAN_EXIT_CODE -ne 0 ]; then
+            echo "❌ Terraform plan failed with exit code $PLAN_EXIT_CODE"
+            exit $PLAN_EXIT_CODE
+          fi
+
+          echo "✅ Terraform plan completed successfully"
+          echo "PLAN_EXIT_CODE=$PLAN_EXIT_CODE" >> $GITHUB_OUTPUT
+
+
+      - name: Terraform Plan (GCP)
+        if: needs.detect-provider.outputs.provider == 'gcp'
+        id: plan-gcp
+        env:
+          GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          echo "📋 Creating Terraform plan..."
+          terraform plan -input=false -out=tfplan -no-color | tee plan.txt
+          PLAN_EXIT_CODE=$?
+
+          if [ $PLAN_EXIT_CODE -ne 0 ]; then
+            echo "❌ Terraform plan failed with exit code $PLAN_EXIT_CODE"
+            exit $PLAN_EXIT_CODE
+          fi
+
+          echo "✅ Terraform plan completed successfully"
+          echo "PLAN_EXIT_CODE=$PLAN_EXIT_CODE" >> $GITHUB_OUTPUT
+
+      #----------------------------- Terraform plan to JSON -------------------------
+      - name: Convert Terraform Plan to JSON
+        if: success() || failure()
+        run: |
+          echo "📄 Converting Terraform plan to JSON format..."
+          terraform show -json tfplan > tfplan.json
+          echo "✅ Plan converted to JSON"
+
+      #----------------------------- Run Checkov on Terraform Plan -------------------------
+      - name: Run Checkov on Terraform Plan
+        if: success() || failure()
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: environments/${{ env.ENVIRONMENT }}
+          file: environments/${{ env.ENVIRONMENT }}/tfplan.json
+          framework: terraform_plan
+          output_format: cli,json
+          output_file_path: console,checkov-plan-results.json
+          soft_fail: false
+          quiet: false
+          skip_check: CKV_TF_1,CKV_AZURE_33,CKV2_AZURE_41,CKV2_AZURE_40,CKV2_AZURE_33,CKV2_AZURE_21,CKV2_AZURE_1
+          download_external_modules: false
+
+            

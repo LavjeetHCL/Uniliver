@@ -1,2 +1,13 @@
-* @LavjeetKumar
+# Development Environment
+environments/Dev/* @chanchal2223 #Approver to dev
 
+# QA Environment
+environments/QA/* @RadhaKushu #Approver to QA
+
+# Production Environment (Highest Security)
+environments/Prod/* @LavjeetKumar #Approver to Prod
+
+# CI/CD and Automation
+.github/workflows/* @Lavjeet223 #Approver to CI/CD workflows
+
+j
