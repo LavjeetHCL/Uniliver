@@ -29,6 +29,7 @@ variable "vms" {
     vnet_name           = string
     subnet_name         = string
     size                = string
+    admin_username      = string
     userdata_script     = string
     inbound_open_ports  = list(number)
     source_image_reference = object({
@@ -38,17 +39,18 @@ variable "vms" {
       version   = string
     })
     enable_public_ip = bool
-    kv_name = string
+    #kv_name = string
   }))
 }
 
 
-variable "key_vaults" {
 
-  type = map(object({
-    kv_name  = string
-    location = string
-    rg_name  = string
-  }))
-  description = "A map of Key Vault configurations."
-}
+# variable "key_vaults" {
+
+#   type = map(object({
+#     kv_name  = string
+#     location = string
+#     rg_name  = string
+#   }))
+#   description = "A map of Key Vault configurations."
+# }
